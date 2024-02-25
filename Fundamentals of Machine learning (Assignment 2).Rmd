@@ -1,0 +1,130 @@
+---
+title: "FML Assignment 2"
+author: "Neetu"
+date: "2024-02-25"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(class)
+library(caret)
+library(psych)
+library(dplyr)
+library(e1071)
+
+# Read the CSV file
+data <- read.csv("C:/Users/Neetu Aavula/Downloads/UniversalBank.csv")
+head(data)
+
+#Removing row “ID”:
+data <- data[, -1]
+head(data)
+
+#Removing row “Zip Code”:
+data <- data[, -4]
+head(data)
+
+#Creating and adding dummies to the data ‘UniversalBank’
+library(fastDummies)
+data <- dummy_cols(data, select_columns = "Education")
+head(data)
+
+#Removing Row ‘Education’
+data <- data[, -6]
+head(data)
+
+#Partitioning dataset into 60%(training) and 40%(validation )
+set.seed(123)
+train.index <-sample(row.names(data),0.6*dim(data)[1])
+valid.index <-setdiff(row.names(data),train.index)
+training_u.bank<-data[train.index,]
+valid_u.bank<-data[valid.index,]
+
+#creating new customer dataset
+new.customer=data.frame(Age = 40, Experience = 10, Income = 84,Family=2,
+CCAvg = 2,Mortgage = 0, Securities.Account = 0, CD.Account = 0, Online =
+1,CreditCard = 1, high_school = 0, under_grad = 1, grad = 0)
+new.customer
+
+#Normalization
+library(caret)
+training_norm.values <- preProcess(training_u.bank,
+method=c("center","scale"))
+validation_norm.values <- preProcess(valid_u.bank,
+method=c("center","scale"))
+
+#KNN classificaltion
+library(FNN)
+prediction <- knn(train = training_u.bank[,-c(7)],test = new.customer,cl =
+training_u.bank[,7], k=1, prob=TRUE)
+knn.attributes <- attributes(prediction)
+
+#After classifing the data into KNN, we can see that the probability is 1
+knn.attributes[3]
+actual= valid_u.bank$Personal.Loan
+prediction_prob = attr(prediction,"prob")
+mean(prediction==actual)
+
+##choice of k that balances between overfitting and ignoring the predictor information
+accuracy_u.bank <- data.frame(k = seq(1, 60, 1), accuracy = rep(0, 60))
+for(i in 1:60) {
+prediction <- knn(train = training_u.bank[,-7], test = valid_u.bank[-7],cl =
+training_u.bank[,7], k = i, prob=TRUE)
+accuracy_u.bank[i,2] <- mean(prediction==actual)
+}
+accuracy_u.bank
+
+###Hence i have observed the K accuracy is highest when K=35 which is 0.9095 
+set.seed(123)
+prediction <- knn(train = training_u.bank[,-7], test = valid_u.bank[,-7],cl = training_u.bank[,7], k = 5, prob=TRUE)
+confusionMatrix(prediction, as.factor(valid_u.bank[,7]))
+
+####Consider the following customer: Age = 40, Experience = 10, Income = 84,Family = 2, CCAvg = 2, Education_1 = 0, Education_2 = 1, Education_3=0, Mortgage = 0,Securities Account = 0, CD Account = 0, Online = 1 and Credit Card=1. Classify the customer using the best k.
+
+customer_newdata = data.frame(Age = 40, Experience = 10, Income = 84,Family =
+2, CCAvg = 2, Education_1 = 0, Education_2 = 1, Education_3 =0,Mortgage = 0,
+Securities.Account = 0, CD.Account = 0, Online = 1, CreditCard = 1)
+prediction.1 <- knn(train = training_u.bank[,-7],test = customer_newdata, cl
+= training_u.bank[,7], k=35, prob=TRUE)
+prediction.1
+
+set.seed(456)
+train_u.bank <- sample(rownames(data), 0.5*dim(data)[1])
+set.seed(456)
+validate_u.bank <-
+sample(setdiff(rownames(data),train_u.bank),0.3*dim(data)[1])
+test_u.bank = setdiff(rownames(data), union(train_u.bank,
+validate_u.bank))
+data[train_u.bank, ]
+
+validate_u.bank <- data[validate_u.bank, ]
+test_u.bank <- data[test_u.bank, ]
+
+##normalisation
+norm.values <- preProcess(training_u.bank[, -c(7)], method=c("center",
+"scale"))
+training_u.bank[, -c(7)] <- predict(norm.values, training_u.bank[, -c(7)])
+validate_u.bank[, -c(7)] <- predict(norm.values, validate_u.bank[, -c(7)])
+test_u.bank[, -c(7)] <- predict(norm.values, test_u.bank[, -c(7)])
+
+##Performing kNN on train, test and validation data
+test_knn <- knn(train = training_u.bank[, -c(7)],test = test_u.bank[, -
+c(7)],cl = training_u.bank[,7], k=35, prob = TRUE)
+valid_knn <- knn(train = training_u.bank[, -c(7)],test = validate_u.bank[, -
+c(7)],cl = training_u.bank[,7], k=35, prob = TRUE)
+train_knn <- knn(train = training_u.bank[, -c(7)],test = training_u.bank[, -
+c(7)], cl = training_u.bank[,7], k=35, prob = TRUE)
+
+##Confusion Matrix for train, test and validation
+confusionMatrix(test_knn, as.factor(test_u.bank[,7]))
+confusionMatrix(valid_knn, as.factor(validate_u.bank[,7]))
+confusionMatrix(train_knn, as.factor(training_u.bank[,7]))
+
+```
