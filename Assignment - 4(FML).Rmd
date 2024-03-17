@@ -1,0 +1,60 @@
+---
+title: "FML 4"
+author: "Neetu"
+date: "2024-03-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Load necessary libraries
+library(readr)
+library(dplyr)
+library(cluster)
+library(ggplot2)
+
+# Read the dataset
+Pharmaceuticals <- read_csv("Assignments/Pharmaceuticals.csv")
+
+# Select only the numeric variables for clustering
+numeric_data <- select(Pharmaceuticals, Market_Cap, Beta, PE_Ratio, ROE, ROA, Asset_Turnover, Leverage, Rev_Growth, Net_Profit_Margin)
+
+# Normalize the numeric data
+scaled_data <- scale(numeric_data)
+
+# Determine the optimal number of clusters using the elbow method
+wss <- numeric(10)
+for (i in 1:10) {
+  kmeans_result <- kmeans(scaled_data, centers = i, nstart = 10)
+  wss[i] <- sum(kmeans_result$withinss)
+}
+plot(1:10, wss, type = "b", xlab = "Number of Clusters", ylab = "Within Sum of Squares")
+
+# Perform k-Means clustering with the chosen number of clusters
+num_clusters <- 3  
+
+# Change this to the chosen number of clusters
+kmeans_result <- kmeans(scaled_data, centers = num_clusters, nstart = 10)
+
+# Add cluster labels to the original dataset
+Pharmaceuticals$Cluster <- as.factor(kmeans_result$cluster)
+
+# Interpret the clusters
+cluster_centers <- aggregate(scaled_data, by = list(Cluster = kmeans_result$cluster), FUN = mean)
+print("Cluster Centers:")
+print(cluster_centers)
+
+# Analyze patterns in non-cluster variables (columns 10 to 12)
+
+# Naming clusters
+# Example: Assuming num_clusters = 3, you can name clusters based on characteristics observed
+Pharmaceuticals$Cluster_Name <- factor(Pharmaceuticals$Cluster, labels = c("Cluster 1", "Cluster 2", "Cluster 3"))
+
+# Print the dataset with cluster labels and names
+print("Data with Cluster Labels and Names:")
+print(Pharmaceuticals)
+```
+
