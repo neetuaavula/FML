@@ -1,0 +1,135 @@
+---
+title: "FML Assignment 5"
+author: "Neetu"
+date: "2024-04-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readr)
+# Load the data set
+Cereals_data <- read_csv("Assignments/Cereals.csv")
+head(Cereals_data)
+
+# Summarizing the data
+summary(Cereals_data)
+
+# Data Preprocessing: Remove cereals with missing values
+clean_data <- na.omit(Cereals_data)
+
+# Scaling the data
+cereals_scaledata <- clean_data
+cereals_scaledata[, c(4:16)] <- scale(clean_data[, c(4:16)])
+
+# Viewing the cleaned data
+head(cereals_scaledata)
+
+```
+##Apply hierarchical clustering to the data using Euclidean distance to the normalized measurements. Use Agnes to compare the clustering from single linkage, complete linkage, average linkage, and Ward. Choose the best method
+
+```{r}
+# Calculate Euclidean distance
+Euclidean_distance <- dist(cereals_scaledata[, c(4:16)], method = "euclidean")
+
+# Perform hierarchical clustering with different linkage methods
+cluster_single <- agnes(Euclidean_distance, method = "single")
+cluster_complete <- agnes(Euclidean_distance, method = "complete")
+cluster_average <- agnes(Euclidean_distance, method = "average")
+cluster_ward <- agnes(Euclidean_distance, method = "ward")
+
+# Plot dendrograms for each linkage method
+par(mfrow = c(2, 2))  # Arrange plots in a 2x2 grid
+plot(cluster_single, main = "Single Linkage")
+plot(cluster_complete, main = "Complete Linkage")
+plot(cluster_average, main = "Average Linkage")
+plot(cluster_ward, main = "Ward's Method")
+
+# Perform hierarchical clustering with Ward linkage
+ward_linkage <- agnes(Euclidean_distance, method = "ward")
+
+# Create a list to compare clustering using Agnes
+agnes_compare <- list(
+  Single = single_linkage,
+  Complete = complete_linkage,
+  Average = average_linkage,
+  Ward = ward_linkage
+)
+
+# Plot dendrograms for each linkage method
+par(mfrow = c(2, 2))
+for (i in names(agnes_compare)) {
+  plot(agnes_compare[[i]], main = paste("Clustering using", i, "linkage"))
+}
+
+# Choose the best method based on Agglomerative Coefficient
+agnes_coefficients <- sapply(agnes_compare, function(x) x$ac)
+best_method <- names(agnes_compare)[which.max(agnes_coefficients)]
+cat("Best method based on Agglomerative Coefficient:", best_method, "\n")
+
+```
+
+##How many clusters would you choose?
+```{r}
+library(factoextra)
+
+# Elbow method
+elbow <- fviz_nbclust(clean_data[, c(4:16)], hcut, method = "wss", k.max = 25) +
+  labs(title = "Elbow Method: Optimal Number of Clusters") +
+  geom_vline(xintercept = 12, linetype = 2)  # Assuming you want to limit the number of clusters to 12
+
+# Silhouette method
+silhouette <- fviz_nbclust(clean_data[, c(4:16)], hcut, method = "silhouette", k.max = 30) +
+  labs(title = "Silhouette Method: Optimal Number of Clusters") +
+  geom_vline(xintercept = 12, linetype = 2)  # Assuming you want to limit the number of clusters to 12
+
+elbow  # Display the elbow plot
+silhouette  # Display the silhouette plot
+
+```
+##Comment on the structure of the clusters and on their stability. Hint: To check stability, partition the data and see how well clusters formed based on one part apply to the other part. To do this: 
+● Cluster partition A
+● Use the cluster centroids from A to assign each record in partition B (each record
+is assigned to the cluster with the closest centroid).
+● Assess how consistent the cluster assignments are compared to the
+assignments based on all the data
+```{r}
+# Partition the data
+set.seed(123)  # for reproducibility
+partition_index <- sample(1:nrow(cereals_scaledata), size = 0.5 * nrow(cereals_scaledata))
+partition_A <- cereals_scaledata[partition_index, ]
+partition_B <- cereals_scaledata[-partition_index, ]
+
+# Perform hierarchical clustering on partition A
+hierarchical_A <- hclust(dist(partition_A[, c(4:16)]), method = "ward.D2")
+
+# Calculate cluster centroids of partition A
+cluster_centers <- aggregate(partition_A[, c(4:16)], by = list(cutree(hierarchical_A, k = 5)), FUN = mean)
+
+# Assign records in partition B to clusters based on centroids from partition A
+cluster_assignments_B <- apply(partition_B[, c(4:16)], 1, function(x) {
+  min_distance_cluster <- which.min(apply(cluster_centers[, -1], 1, function(y) sqrt(sum((x - y)^2))))
+  return(cluster_centers[min_distance_cluster, 1])
+})
+
+# Evaluate consistency of cluster assignments in partition B
+consistency_score <- sum(cutree(hclust(dist(partition_B[, c(4:16)]), method = "ward.D2"), k = 5) == cluster_assignments_B) / nrow(partition_B)
+
+# Comment on the structure of the clusters and their stability
+cat("The clusters formed in partition A are structured based on their Euclidean distances, with", length(unique(cluster_assignments_B)), "clusters.\n")
+cat("The consistency score between the cluster assignments in partition B and the assignments based on all the data is:", consistency_score, "\n")
+cat("This indicates the stability of the clusters across different partitions of the data.\n")
+
+```
+##The elementary public schools would like to choose a set of cereals to include in their daily cafeterias. Every day a different cereal is offered, but all cereals should support a healthy diet. For this goal, you are requested to find a cluster of “healthy cereals.” Should the data be normalized? If not, how should they be used in the cluster analysis? 
+
+In this scenario, normalizing the cereal nutritional data may not be suitable as it could distort the true nutritional values, especially if the dataset lacks a diverse representation of cereals. Instead, preprocessing the data by calculating ratios to the daily recommended amounts of nutrients for children would provide a more informative basis for analysis. This approach ensures that all nutrients are considered equally in the clustering process, allowing analysts to identify clusters of cereals that contribute to a balanced and healthy diet. Hierarchical clustering, using methods like Agnes with complete linkage, can then be applied to identify clusters of "healthy" cereals based on their nutrient profiles. Checking the stability of the clusters by partitioning the data helps ensure the reliability of the results. Additionally, considering factors like consumer ratings and store displays can further inform the selection of cereals for inclusion in school cafeterias.
+
+
+
+
+
+

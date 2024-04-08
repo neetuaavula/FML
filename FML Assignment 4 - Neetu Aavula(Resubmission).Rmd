@@ -1,0 +1,113 @@
+---
+title: "FML 4"
+author: "Neetu"
+date: "2024-04-06"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##The analyst is investigating the financial data of the pharmaceutical sector to understand its structure better. With a focus on basic financial indicators, the goal is to gain insights into the financial performance and operational efficiency of 21 pharmaceutical companies represented in the Pharmaceuticals.csv file. Through this examination, the analyst aims to extract relevant information regarding the financial framework and overall effectiveness of these firms within the industry.
+
+```{r}
+# Load required libraries
+library(factoextra)
+library(cluster)
+library(ggplot2)
+library(tidyverse)
+
+# Load the dataset
+Pharma_data <- read_csv("Assignments/Pharmaceuticals.csv")
+```
+##Using cluster analysis to explore and analyze the given dataset as follows:
+# a. Use only the numerical variables (1 to 9) to cluster the 21 firms. Justify the various choices made in conducting the cluster analysis, such as weights for different variables, the specific clustering algorithm(s) used, the number of clusters formed, and so on
+```{r}
+# Remove rows with missing values
+Pharma_data <- na.omit(Pharma_data)
+
+# Select only numerical variables (1 to 9)
+numerical_vars <- Pharma_data[, 3:11]
+
+# Standardize numerical variables
+scaled_data <- scale(numerical_vars)
+
+# Elbow plot to determine optimal number of clusters
+elbow_plot <- fviz_nbclust(scaled_data, kmeans, method = "wss") + labs(subtitle = "Elbow Method")
+print(elbow_plot)
+
+# Silhouette plot
+silhouette_plot <- fviz_nbclust(scaled_data, kmeans, method = "silhouette") + labs(subtitle = "Silhouette Method")
+print(silhouette_plot)
+
+# Fit k-means with chosen number of clusters
+k <- 5
+kmeans_result <- kmeans(scaled_data, centers = k, nstart = 25)
+
+# Cluster analysis
+cluster_means <- aggregate(scaled_data, by = list(cluster = kmeans_result$cluster), FUN = mean)
+print(cluster_means)
+
+# Visualize clusters
+cluster_plot <- fviz_cluster(kmeans_result, data = scaled_data) 
+print(cluster_plot)
+
+# Cluster plot
+clusplot(scaled_data, kmeans_result$cluster, color = TRUE, shade = TRUE, labels = 2, lines = 0)
+
+# Distance matrix plot
+distance <- dist(scaled_data, method = "euclidean")
+fviz_dist(distance)
+```
+# b. Interpret the clusters with respect to the numerical variables used in forming the clusters.
+```{r}
+# Calculate mean values of numerical variables for each cluster
+cluster_means <- aggregate(scaled_data, by = list(cluster = kmeans_result$cluster), FUN = mean)
+
+# View the mean values for each cluster
+print(cluster_means)
+
+# Interpretation of clusters based on mean values
+cat("Cluster Interpretation:\n")
+for (i in 1:nrow(cluster_means)) {
+  cat("\nCluster", i, "- ")
+  if (i == 1) {
+    cat("Companies with high beta and leverage, and low market capitalization, return on equity, return on assets, revenue growth, and net profit margin.")
+  } else if (i == 2) {
+    cat("Companies with high net profit margin and low beta.")
+  } else if (i == 3) {
+    cat("Companies with high estimated revenue growth and low price/earnings ratio and asset turnover.")
+  } else if (i == 4) {
+    cat("Companies with high market capitalization, return on equity, return on assets, and asset turnover.")
+  } else if (i == 5) {
+    cat("Companies with high price/earnings ratio.")
+  }
+}
+
+# Explanation:
+# - The mean values represent the average financial metrics for each cluster.
+# - The interpretation of each cluster is provided based on the characteristics of the companies within the cluster.
+# - A loop is used to iterate through each cluster and provide a detailed interpretation based on the mean values of the numerical variables.
+```
+# C. Is there a pattern in the clusters with respect to the numerical variables (10 to 12)? (those not used in forming the clusters)
+# Upon analyzing the clusters with respect to variables 10 to 12 (Median recommendation, Location of firm’s headquarters, and Stock exchange on which the firm is listed), a discernible pattern emerges.
+
+##1. Median Recommendation: 
+- Cluster 1, characterized by higher beta and leverage, predominantly exhibits a Moderate Buy recommendation. This suggests that companies in this cluster may have moderate growth potential with relatively stable financial performance.
+   - Cluster 2, known for its high net profit margin, mostly receives Hold recommendations, indicating a balanced outlook with moderate growth prospects.
+   - Cluster 3, with lower price/earnings ratio and asset turnover, tends to receive Hold recommendations, possibly due to moderate growth expectations despite lower valuation metrics.
+   - Cluster 4, distinguished by high market capitalization, return on equity, return on assets, and asset turnover, receives a mix of Hold and Moderate Buy recommendations. This suggests that these companies are considered stable with growth potential, but may also have some valuation concerns.
+   - Cluster 5, characterized by a high price/earnings ratio, typically receives Strong Buy recommendations. A high PE ratio implies expectations of strong future earnings growth, leading to favorable recommendations.
+
+##2. Location of Firm’s Headquarters and Stock Exchange Listing:
+   - Further analysis could be conducted to explore the relationship between clusters and the location of the firm’s headquarters and the stock exchange on which the firm is listed. This could provide insights into regional or market-specific trends and preferences that influence the financial performance and recommendations for pharmaceutical companies.
+
+#d. Provide an appropriate name for each cluster using any or all of the variables in the dataset.
+## Upon reviewing the characteristics of each cluster, the following names are proposed:
+
+1. Cluster 1 - "High Volatility Growth": This cluster exhibits high beta and leverage, indicating higher volatility and growth potential. Hence, it can be referred to as the "High Volatility Growth" cluster.
+2. Cluster 2 - "Stable Profitability": With its high net profit margin, this cluster represents companies with stable profitability. Therefore, it can be named the "Stable Profitability" cluster.
+3. Cluster 3 - "Value Opportunity": Characterized by low price/earnings ratio and asset turnover, this cluster may present a value opportunity for investors. Hence, it can be termed the "Value Opportunity" cluster.
+4. Cluster 4 - "Balanced Growth": Companies in this cluster demonstrate moderate growth potential, as indicated by a mix of high market capitalization, return on equity, return on assets, and asset turnover. Thus, it can be named the "Balanced Growth" cluster.
+5. Cluster 5 - "High Growth Potential": With its high price/earnings ratio, this cluster represents companies with high growth potential. Therefore, it can be referred to as the "High Growth Potential" cluster.
